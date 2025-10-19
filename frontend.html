@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rich OneBox Emails - Frontend UI</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <style>
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-envelope-open-text text-2xl text-blue-600 mr-3"></i>
+                        <h1 class="text-2xl font-bold text-gray-900">Rich OneBox Emails</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 bg-green-500 rounded-full" id="connection-status"></div>
+                            <span class="text-sm text-gray-600" id="connection-text">Connected</span>
+                        </div>
+                        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors" onclick="refreshEmails()">
+                            <i class="fas fa-sync-alt mr-2"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-blue-100 rounded-lg">
+                            <i class="fas fa-envelope text-blue-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Total Emails</p>
+                            <p class="text-2xl font-bold text-gray-900" id="total-emails">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-green-100 rounded-lg">
+                            <i class="fas fa-heart text-green-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Interested</p>
+                            <p class="text-2xl font-bold text-gray-900" id="interested-emails">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-yellow-100 rounded-lg">
+                            <i class="fas fa-calendar text-yellow-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Meetings</p>
+                            <p class="text-2xl font-bold text-gray-900" id="meeting-emails">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-red-100 rounded-lg">
+                            <i class="fas fa-ban text-red-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Spam</p>
+                            <p class="text-2xl font-bold text-gray-900" id="spam-emails">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <div class="flex flex-wrap gap-4 items-center">
+                    <div class="flex-1 min-w-64">
+                        <input type="text" id="search-input" placeholder="Search emails..." 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <select id="account-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Accounts</option>
+                    </select>
+                    <select id="category-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Categories</option>
+                        <option value="interested">Interested</option>
+                        <option value="meeting_booked">Meeting Booked</option>
+                        <option value="not_interested">Not Interested</option>
+                        <option value="spam">Spam</option>
+                        <option value="out_of_office">Out of Office</option>
+                    </select>
+                    <button onclick="applyFilters()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-filter mr-2"></i>Filter
+                    </button>
+                </div>
+            </div>
+
+            <!-- Email List -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Emails</h2>
+                </div>
+                <div id="email-list" class="divide-y divide-gray-200">
+                    <!-- Demo emails will be loaded here -->
+                </div>
+                <div id="loading" class="p-8 text-center">
+                    <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+                    <p class="mt-2 text-gray-600">Loading emails...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Email Modal -->
+    <div id="email-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-96 overflow-y-auto">
+                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-gray-900" id="modal-title">Email Details</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="p-6" id="modal-content">
+                    <!-- Email content will be loaded here -->
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                    <button onclick="closeModal()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+                        Close
+                    </button>
+                    <button onclick="categorizeEmail()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-robot mr-2"></i>Categorize
+                    </button>
+                    <button onclick="suggestReply()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <i class="fas fa-reply mr-2"></i>Suggest Reply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Demo data for the frontend
+        const demoEmails = [
+            {
+                id: '1',
+                subject: 'Meeting Request - Product Demo',
+                from: 'john.doe@company.com',
+                to: ['you@company.com'],
+                date: new Date('2024-01-15T10:30:00Z'),
+                body: 'Hi there! I would like to schedule a product demo for next week. Are you available on Tuesday or Wednesday?',
+                aiCategory: 'interested',
+                isRead: false,
+                isFlagged: true,
+                accountId: 'account1'
+            },
+            {
+                id: '2',
+                subject: 'Re: Project Proposal',
+                from: 'sarah.smith@client.com',
+                to: ['you@company.com'],
+                date: new Date('2024-01-15T09:15:00Z'),
+                body: 'Thank you for the proposal. We have scheduled a meeting for next Friday at 2 PM. Looking forward to discussing the details.',
+                aiCategory: 'meeting_booked',
+                isRead: true,
+                isFlagged: false,
+                accountId: 'account1'
+            },
+            {
+                id: '3',
+                subject: 'Out of Office - Vacation',
+                from: 'auto-reply@company.com',
+                to: ['you@company.com'],
+                date: new Date('2024-01-15T08:00:00Z'),
+                body: 'I am currently out of office on vacation until January 20th. I will respond to your email upon my return.',
+                aiCategory: 'out_of_office',
+                isRead: true,
+                isFlagged: false,
+                accountId: 'account2'
+            },
+            {
+                id: '4',
+                subject: 'URGENT: Act Now! Limited Time Offer',
+                from: 'spam@fakecompany.com',
+                to: ['you@company.com'],
+                date: new Date('2024-01-15T07:30:00Z'),
+                body: 'CLICK HERE NOW! Limited time offer! Get 90% off! Act fast before it expires!',
+                aiCategory: 'spam',
+                isRead: false,
+                isFlagged: false,
+                accountId: 'account1'
+            },
+            {
+                id: '5',
+                subject: 'Not Interested in Your Services',
+                from: 'decline@prospect.com',
+                to: ['you@company.com'],
+                date: new Date('2024-01-14T16:45:00Z'),
+                body: 'Thank you for reaching out, but we are not interested in your services at this time. Please remove us from your mailing list.',
+                aiCategory: 'not_interested',
+                isRead: true,
+                isFlagged: false,
+                accountId: 'account1'
+            }
+        ];
+
+        let currentEmails = [...demoEmails];
+        let selectedEmailId = null;
+
+        // Initialize the application
+        function init() {
+            console.log('Initializing Rich OneBox Emails Frontend...');
+            loadEmails();
+            updateStats();
+            setupEventListeners();
+        }
+
+        // Load emails into the UI
+        function loadEmails() {
+            const emailList = document.getElementById('email-list');
+            const loading = document.getElementById('loading');
+            
+            loading.style.display = 'none';
+            
+            if (currentEmails.length === 0) {
+                emailList.innerHTML = '<div class="p-8 text-center text-gray-500">No emails found</div>';
+                return;
+            }
+
+            emailList.innerHTML = currentEmails.map(email => `
+                <div class="p-6 hover:bg-gray-50 cursor-pointer" onclick="openEmail('${email.id}')">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3">
+                                <h3 class="text-lg font-medium text-gray-900">${email.subject}</h3>
+                                <span class="px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(email.aiCategory)}">
+                                    ${email.aiCategory.replace('_', ' ').toUpperCase()}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">From: ${email.from}</p>
+                            <p class="text-sm text-gray-500 mt-2 line-clamp-2">${email.body}</p>
+                        </div>
+                        <div class="flex items-center space-x-2 ml-4">
+                            <span class="text-sm text-gray-500">${new Date(email.date).toLocaleDateString()}</span>
+                            ${email.isFlagged ? '<i class="fas fa-flag text-yellow-500"></i>' : ''}
+                            ${!email.isRead ? '<i class="fas fa-circle text-blue-500 text-xs"></i>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Get category color
+        function getCategoryColor(category) {
+            const colors = {
+                'interested': 'bg-green-100 text-green-800',
+                'meeting_booked': 'bg-blue-100 text-blue-800',
+                'not_interested': 'bg-red-100 text-red-800',
+                'spam': 'bg-gray-100 text-gray-800',
+                'out_of_office': 'bg-yellow-100 text-yellow-800'
+            };
+            return colors[category] || 'bg-gray-100 text-gray-800';
+        }
+
+        // Update statistics
+        function updateStats() {
+            const total = currentEmails.length;
+            const interested = currentEmails.filter(e => e.aiCategory === 'interested').length;
+            const meetings = currentEmails.filter(e => e.aiCategory === 'meeting_booked').length;
+            const spam = currentEmails.filter(e => e.aiCategory === 'spam').length;
+
+            document.getElementById('total-emails').textContent = total;
+            document.getElementById('interested-emails').textContent = interested;
+            document.getElementById('meeting-emails').textContent = meetings;
+            document.getElementById('spam-emails').textContent = spam;
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const searchText = document.getElementById('search-input').value.toLowerCase();
+            const category = document.getElementById('category-filter').value;
+
+            currentEmails = demoEmails.filter(email => {
+                const matchesSearch = !searchText || 
+                    email.subject.toLowerCase().includes(searchText) ||
+                    email.body.toLowerCase().includes(searchText) ||
+                    email.from.toLowerCase().includes(searchText);
+                
+                const matchesCategory = !category || email.aiCategory === category;
+
+                return matchesSearch && matchesCategory;
+            });
+
+            loadEmails();
+            updateStats();
+        }
+
+        // Open email modal
+        function openEmail(emailId) {
+            const email = currentEmails.find(e => e.id === emailId);
+            if (!email) return;
+
+            selectedEmailId = emailId;
+            
+            document.getElementById('modal-title').textContent = email.subject;
+            document.getElementById('modal-content').innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-sm font-medium text-gray-700">From:</label>
+                        <p class="text-gray-900">${email.from}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-700">To:</label>
+                        <p class="text-gray-900">${email.to.join(', ')}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-700">Date:</label>
+                        <p class="text-gray-900">${new Date(email.date).toLocaleString()}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-700">Category:</label>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(email.aiCategory)}">
+                            ${email.aiCategory.replace('_', ' ').toUpperCase()}
+                        </span>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-700">Body:</label>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <pre class="whitespace-pre-wrap text-sm text-gray-900">${email.body}</pre>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('email-modal').classList.remove('hidden');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('email-modal').classList.add('hidden');
+            selectedEmailId = null;
+        }
+
+        // Categorize email (demo)
+        function categorizeEmail() {
+            if (!selectedEmailId) return;
+            
+            showNotification('Email categorized successfully! (Demo)', 'success');
+            closeModal();
+        }
+
+        // Suggest reply (demo)
+        function suggestReply() {
+            if (!selectedEmailId) return;
+            
+            const suggestedReply = `Thank you for your email. I appreciate you reaching out. Based on your message, I would be happy to discuss this further. Please let me know your availability for a call next week.`;
+            
+            showNotification('Suggested reply generated! (Demo)', 'success');
+            alert(`Suggested Reply:\n\n${suggestedReply}`);
+        }
+
+        // Refresh emails
+        function refreshEmails() {
+            showNotification('Emails refreshed! (Demo)', 'info');
+            loadEmails();
+            updateStats();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('search-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    applyFilters();
+                }
+            });
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500 text-white' :
+                type === 'error' ? 'bg-red-500 text-white' :
+                'bg-blue-500 text-white'
+            }`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
