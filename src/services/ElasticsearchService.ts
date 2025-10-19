@@ -4,13 +4,22 @@ import DatabaseManager from '../config/database';
 import { config } from '../config';
 
 export class ElasticsearchService {
-  private client: Client;
+  private client: Client | null = null;
 
   constructor() {
-    this.client = DatabaseManager.getInstance().getElasticsearchClient();
+    try {
+      this.client = DatabaseManager.getInstance().getElasticsearchClient();
+    } catch (error) {
+      console.warn('Elasticsearch not available, service will be disabled:', (error as Error).message);
+    }
   }
 
   public async indexEmail(email: EmailMessage): Promise<void> {
+    if (!this.client) {
+      console.log(`Elasticsearch not available, skipping email indexing: ${email.id}`);
+      return;
+    }
+
     try {
       await this.client.index({
         index: config.elasticsearch.index,
@@ -44,6 +53,11 @@ export class ElasticsearchService {
   }
 
   public async updateEmailCategory(emailId: string, category: string): Promise<void> {
+    if (!this.client) {
+      console.log(`Elasticsearch not available, skipping category update: ${emailId}`);
+      return;
+    }
+
     try {
       await this.client.update({
         index: config.elasticsearch.index,
@@ -68,6 +82,16 @@ export class ElasticsearchService {
     page: number;
     limit: number;
   }> {
+    if (!this.client) {
+      console.log('Elasticsearch not available, returning empty search results');
+      return {
+        emails: [],
+        total: 0,
+        page,
+        limit
+      };
+    }
+
     try {
       const query: any = {
         bool: {
@@ -143,8 +167,8 @@ export class ElasticsearchService {
         }
       });
 
-      const emails = response.body.hits.hits.map((hit: any) => hit._source);
-      const total = response.body.hits.total.value;
+      const emails = response.hits.hits.map((hit: any) => hit._source);
+      const total = (response.hits.total as any).value;
 
       return {
         emails,
@@ -164,6 +188,16 @@ export class ElasticsearchService {
     byFolder: Record<string, number>;
     recentActivity: number;
   }> {
+    if (!this.client) {
+      console.log('Elasticsearch not available, returning empty stats');
+      return {
+        total: 0,
+        byCategory: {},
+        byFolder: {},
+        recentActivity: 0
+      };
+    }
+
     try {
       const query: any = {
         bool: {
@@ -203,20 +237,20 @@ export class ElasticsearchService {
       });
 
       const byCategory: Record<string, number> = {};
-      response.body.aggregations.byCategory.buckets.forEach((bucket: any) => {
+      (response.aggregations as any).byCategory.buckets.forEach((bucket: any) => {
         byCategory[bucket.key] = bucket.doc_count;
       });
 
       const byFolder: Record<string, number> = {};
-      response.body.aggregations.byFolder.buckets.forEach((bucket: any) => {
+      (response.aggregations as any).byFolder.buckets.forEach((bucket: any) => {
         byFolder[bucket.key] = bucket.doc_count;
       });
 
       return {
-        total: response.body.hits.total.value,
+        total: (response.hits.total as any).value,
         byCategory,
         byFolder,
-        recentActivity: response.body.aggregations.recentActivity.doc_count
+        recentActivity: (response.aggregations as any).recentActivity.doc_count
       };
     } catch (error) {
       console.error('Error getting email stats:', error);
@@ -225,6 +259,11 @@ export class ElasticsearchService {
   }
 
   public async deleteEmail(emailId: string): Promise<void> {
+    if (!this.client) {
+      console.log(`Elasticsearch not available, skipping email deletion: ${emailId}`);
+      return;
+    }
+
     try {
       await this.client.delete({
         index: config.elasticsearch.index,
@@ -238,9 +277,14 @@ export class ElasticsearchService {
   }
 
   public async bulkIndexEmails(emails: EmailMessage[]): Promise<void> {
+    if (!this.client) {
+      console.log(`Elasticsearch not available, skipping bulk indexing of ${emails.length} emails`);
+      return;
+    }
+
     try {
       const body = [];
-      
+
       for (const email of emails) {
         body.push({
           index: {

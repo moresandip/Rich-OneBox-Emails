@@ -3,7 +3,7 @@ import { EmailMessageModel } from '../models/EmailMessage';
 import { EmailAccountModel } from '../models/EmailAccount';
 import { ElasticsearchService } from '../services/ElasticsearchService';
 import { GeminiAIService } from '../services/GeminiAIService';
-import { SearchFilters, EmailCategory } from '../types';
+import { SearchFilters, EmailCategory, EmailMessage } from '../types';
 
 export class EmailController {
   private elasticsearchService: ElasticsearchService;
@@ -105,7 +105,8 @@ export class EmailController {
       }
 
       // Update Elasticsearch
-      await this.elasticsearchService.indexEmail(email.toObject());
+      const emailObj = email.toObject();
+      await this.elasticsearchService.indexEmail({ ...emailObj, id: (emailObj._id as any).toString() } as EmailMessage);
 
       res.json({
         success: true,
@@ -162,7 +163,8 @@ export class EmailController {
         return;
       }
 
-      const aiSuggestion = await this.aiService.categorizeEmail(email.toObject());
+      const emailObj = email.toObject();
+      const aiSuggestion = await this.aiService.categorizeEmail({ ...emailObj, id: (emailObj._id as any).toString() } as EmailMessage);
       
       if (aiSuggestion) {
         email.aiCategory = aiSuggestion.category;
@@ -206,7 +208,8 @@ export class EmailController {
         return;
       }
 
-      const suggestedReply = await this.aiService.generateSuggestedReply(email.toObject());
+      const emailObj = email.toObject();
+      const suggestedReply = await this.aiService.generateSuggestedReply({ ...emailObj, id: (emailObj._id as any).toString() } as EmailMessage);
 
       if (suggestedReply) {
         res.json({

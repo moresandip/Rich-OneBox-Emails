@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { EmailAccount as IEmailAccount } from '../types';
 
-export interface EmailAccountDocument extends IEmailAccount, Document {}
+export interface EmailAccountDocument extends Omit<IEmailAccount, 'id'>, Document {}
 
 const EmailAccountSchema = new Schema<EmailAccountDocument>({
   email: {
@@ -38,7 +38,7 @@ const EmailAccountSchema = new Schema<EmailAccountDocument>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret) {
+    transform: function(doc, ret: any) {
       delete ret.password;
       return ret;
     }

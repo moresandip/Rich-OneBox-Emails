@@ -39,14 +39,13 @@ Please analyze this email and provide your categorization.`;
 
       const result = await this.model.generateContent([
         {
-          role: 'user',
-          parts: [{ text: `${systemInstruction}\n\n${prompt}` }]
+          text: `${systemInstruction}\n\n${prompt}`
         }
       ]);
 
       const response = await result.response;
       const text = response.text();
-      
+
       return this.parseCategorizationResult(text);
     } catch (error) {
       console.error('Error categorizing email with Gemini:', error);
@@ -125,8 +124,7 @@ Reply:`;
 
       const result = await this.model.generateContent([
         {
-          role: 'user',
-          parts: [{ text: `${systemInstruction}\n\n${prompt}` }]
+          text: `${systemInstruction}\n\n${prompt}`
         }
       ]);
 
@@ -204,14 +202,13 @@ Respond with a JSON object containing:
 
       const result = await this.model.generateContent([
         {
-          role: 'user',
-          parts: [{ text: prompt }]
+          text: prompt
         }
       ]);
 
       const response = await result.response;
       const text = response.text();
-      
+
       return this.parseSentimentResult(text);
     } catch (error) {
       console.error('Error analyzing email sentiment:', error);

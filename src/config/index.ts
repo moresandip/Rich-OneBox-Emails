@@ -23,6 +23,7 @@ export const config = {
   
   ai: {
     geminiApiKey: process.env.GEMINI_API_KEY || '',
+    openaiApiKey: process.env.OPENAI_API_KEY || '',
     model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
     embeddingModel: process.env.EMBEDDING_MODEL || 'text-embedding-004'
   },

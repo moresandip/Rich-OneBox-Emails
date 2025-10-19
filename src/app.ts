@@ -72,6 +72,9 @@ class App {
   }
 
   private initializeRoutes(): void {
+    // Serve static frontend files
+    this.app.use(express.static('public'));
+
     // Health check
     this.app.get('/health', (req, res) => {
       res.json({
@@ -86,12 +89,9 @@ class App {
     this.app.use('/api/accounts', this.createAccountRoutes());
     this.app.use('/api/system', this.createSystemRoutes());
 
-    // 404 handler
-    this.app.use('*', (req, res) => {
-      res.status(404).json({
-        success: false,
-        error: 'Route not found'
-      });
+    // Serve frontend for all other routes (SPA fallback)
+    this.app.get('*', (req, res) => {
+      res.sendFile('index.html', { root: 'public' });
     });
 
     // Error handler

@@ -40,7 +40,7 @@ export class AIService {
       });
 
       const result = response.choices[0].message.content;
-      return this.parseCategorizationResult(result);
+      return this.parseCategorizationResult(result || '');
     } catch (error) {
       console.error('Error categorizing email:', error);
       return null;
@@ -202,7 +202,7 @@ key_phrases: [comma-separated list of important phrases]
       });
 
       const result = response.choices[0].message.content;
-      return this.parseSentimentResult(result);
+      return this.parseSentimentResult(result || '');
     } catch (error) {
       console.error('Error analyzing email sentiment:', error);
       return {

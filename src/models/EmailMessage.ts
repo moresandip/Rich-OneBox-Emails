@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { EmailMessage as IEmailMessage, EmailCategory } from '../types';
 
-export interface EmailMessageDocument extends IEmailMessage, Document {}
+export interface EmailMessageDocument extends Omit<IEmailMessage, 'id'>, Document {}
 
 const EmailAttachmentSchema = new Schema({
   filename: { type: String, required: true },
