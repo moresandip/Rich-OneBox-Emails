@@ -34,3 +34,4 @@ app.listen(port, () => {
   console.log(`🚀 Rich OneBox Emails running on http://localhost:${port}`);
   console.log(`📧 Health check: http://localhost:${port}/health`);
 });
+

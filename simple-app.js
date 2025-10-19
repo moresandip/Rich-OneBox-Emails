@@ -32,3 +32,4 @@ server.listen(3000, () => {
   console.log('🚀 Rich OneBox Emails running on http://localhost:3000');
   console.log('📧 Health check: http://localhost:3000/health');
 });
+
