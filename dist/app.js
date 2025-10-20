@@ -55,7 +55,6 @@ class App {
         });
     }
     initializeRoutes() {
-        this.app.use(express_1.default.static('public'));
         this.app.get('/health', (req, res) => {
             res.json({
                 status: 'healthy',
@@ -66,8 +65,11 @@ class App {
         this.app.use('/api/emails', this.createEmailRoutes());
         this.app.use('/api/accounts', this.createAccountRoutes());
         this.app.use('/api/system', this.createSystemRoutes());
-        this.app.get('*', (req, res) => {
-            res.sendFile('index.html', { root: 'public' });
+        this.app.use('*', (req, res) => {
+            res.status(404).json({
+                success: false,
+                error: 'Endpoint not found'
+            });
         });
         this.app.use((error, req, res, next) => {
             console.error('Unhandled error:', error);
@@ -183,14 +185,41 @@ class App {
     async initializeServices() {
         try {
             this.loggingService.info('Initializing services...');
-            await database_1.default.getInstance().connectMongoDB();
-            await database_1.default.getInstance().connectElasticsearch();
-            await this.qdrantService.initializeCollection();
-            this.loggingService.info('Qdrant vector database initialized');
-            await this.aiService.initializeProductData();
-            this.loggingService.info('AI service initialized with product data');
-            await this.imapService.start();
-            this.loggingService.info('IMAP service started');
+            try {
+                await database_1.default.getInstance().connectMongoDB();
+                this.loggingService.info('MongoDB connected successfully');
+            }
+            catch (error) {
+                this.loggingService.warn('MongoDB connection failed - some features may not work', error);
+            }
+            try {
+                await database_1.default.getInstance().connectElasticsearch();
+                this.loggingService.info('Elasticsearch connected successfully');
+            }
+            catch (error) {
+                this.loggingService.warn('Elasticsearch connection failed - search features may not work', error);
+            }
+            try {
+                await this.qdrantService.initializeCollection();
+                this.loggingService.info('Qdrant vector database initialized');
+            }
+            catch (error) {
+                this.loggingService.warn('Qdrant initialization failed - AI features may not work', error);
+            }
+            try {
+                await this.aiService.initializeProductData();
+                this.loggingService.info('AI service initialized with product data');
+            }
+            catch (error) {
+                this.loggingService.warn('AI service initialization failed - AI features may not work', error);
+            }
+            try {
+                await this.imapService.start();
+                this.loggingService.info('IMAP service started');
+            }
+            catch (error) {
+                this.loggingService.warn('IMAP service failed to start - email sync may not work', error);
+            }
             this.imapService.on('email:new', (email) => {
                 this.loggingService.logEmailProcessed(email.id, email.accountId);
                 this.io.emit('email:new', email);
@@ -203,11 +232,11 @@ class App {
                 this.loggingService.info('Interested email detected', data);
                 this.io.emit('email:interested', data);
             });
-            this.loggingService.info('All services initialized successfully');
+            this.loggingService.info('Services initialization completed (some services may be unavailable if not configured)');
         }
         catch (error) {
-            this.loggingService.error('Failed to initialize services', error);
-            process.exit(1);
+            this.loggingService.error('Critical error during services initialization', error);
+            this.loggingService.warn('Server will start but some features may not be available');
         }
     }
     async start() {

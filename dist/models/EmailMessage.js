@@ -115,7 +115,6 @@ const EmailMessageSchema = new mongoose_1.Schema({
     timestamps: true
 });
 EmailMessageSchema.index({ accountId: 1, date: -1 });
-EmailMessageSchema.index({ messageId: 1 });
 EmailMessageSchema.index({ from: 1 });
 EmailMessageSchema.index({ subject: 'text', body: 'text' });
 EmailMessageSchema.index({ aiCategory: 1 });

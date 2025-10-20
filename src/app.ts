@@ -72,9 +72,6 @@ class App {
   }
 
   private initializeRoutes(): void {
-    // Serve static frontend files
-    this.app.use(express.static('public'));
-
     // Health check
     this.app.get('/health', (req: express.Request, res: express.Response) => {
       res.json({
@@ -89,9 +86,12 @@ class App {
     this.app.use('/api/accounts', this.createAccountRoutes());
     this.app.use('/api/system', this.createSystemRoutes());
 
-    // Serve frontend for all other routes (SPA fallback)
-    this.app.get('*', (req: express.Request, res: express.Response) => {
-      res.sendFile('index.html', { root: 'public' });
+    // 404 handler for undefined routes
+    this.app.use('*', (req: express.Request, res: express.Response) => {
+      res.status(404).json({
+        success: false,
+        error: 'Endpoint not found'
+      });
     });
 
     // Error handler
@@ -228,21 +228,44 @@ class App {
     try {
       this.loggingService.info('Initializing services...');
 
-      // Connect to databases
-      await DatabaseManager.getInstance().connectMongoDB();
-      await DatabaseManager.getInstance().connectElasticsearch();
+      // Connect to databases (optional - don't fail if not configured)
+      try {
+        await DatabaseManager.getInstance().connectMongoDB();
+        this.loggingService.info('MongoDB connected successfully');
+      } catch (error) {
+        this.loggingService.warn('MongoDB connection failed - some features may not work', error as Error);
+      }
 
-      // Initialize Qdrant vector database
-      await this.qdrantService.initializeCollection();
-      this.loggingService.info('Qdrant vector database initialized');
+      try {
+        await DatabaseManager.getInstance().connectElasticsearch();
+        this.loggingService.info('Elasticsearch connected successfully');
+      } catch (error) {
+        this.loggingService.warn('Elasticsearch connection failed - search features may not work', error as Error);
+      }
 
-      // Initialize AI service with product data
-      await this.aiService.initializeProductData();
-      this.loggingService.info('AI service initialized with product data');
+      // Initialize Qdrant vector database (optional)
+      try {
+        await this.qdrantService.initializeCollection();
+        this.loggingService.info('Qdrant vector database initialized');
+      } catch (error) {
+        this.loggingService.warn('Qdrant initialization failed - AI features may not work', error as Error);
+      }
 
-      // Start IMAP service
-      await this.imapService.start();
-      this.loggingService.info('IMAP service started');
+      // Initialize AI service with product data (optional)
+      try {
+        await this.aiService.initializeProductData();
+        this.loggingService.info('AI service initialized with product data');
+      } catch (error) {
+        this.loggingService.warn('AI service initialization failed - AI features may not work', error as Error);
+      }
+
+      // Start IMAP service (optional - only if accounts exist)
+      try {
+        await this.imapService.start();
+        this.loggingService.info('IMAP service started');
+      } catch (error) {
+        this.loggingService.warn('IMAP service failed to start - email sync may not work', error as Error);
+      }
 
       // Set up IMAP event listeners
       this.imapService.on('email:new', (email) => {
@@ -260,10 +283,11 @@ class App {
         this.io.emit('email:interested', data);
       });
 
-      this.loggingService.info('All services initialized successfully');
+      this.loggingService.info('Services initialization completed (some services may be unavailable if not configured)');
     } catch (error) {
-      this.loggingService.error('Failed to initialize services', error as Error);
-      process.exit(1);
+      this.loggingService.error('Critical error during services initialization', error as Error);
+      // Don't exit - allow server to start even if services fail
+      this.loggingService.warn('Server will start but some features may not be available');
     }
   }
 

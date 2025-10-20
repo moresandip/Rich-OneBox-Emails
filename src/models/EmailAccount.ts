@@ -46,7 +46,6 @@ const EmailAccountSchema = new Schema<EmailAccountDocument>({
 });
 
 // Index for efficient queries
-EmailAccountSchema.index({ email: 1 });
 EmailAccountSchema.index({ isActive: 1 });
 
 export const EmailAccountModel = mongoose.model<EmailAccountDocument>('EmailAccount', EmailAccountSchema);

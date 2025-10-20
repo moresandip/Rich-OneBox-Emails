@@ -76,7 +76,6 @@ const EmailAccountSchema = new mongoose_1.Schema({
         }
     }
 });
-EmailAccountSchema.index({ email: 1 });
 EmailAccountSchema.index({ isActive: 1 });
 exports.EmailAccountModel = mongoose_1.default.model('EmailAccount', EmailAccountSchema);
 //# sourceMappingURL=EmailAccount.js.map
