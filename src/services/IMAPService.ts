@@ -113,7 +113,7 @@ export class IMAPService extends EventEmitter {
         }
       });
 
-      imap.once('error', (error: any) => {
+      imap.once('error', (error: Error) => {
         console.error(`IMAP error for ${account.email}:`, error);
         this.connections.delete(account._id.toString());
         reject(error);
@@ -142,7 +142,7 @@ export class IMAPService extends EventEmitter {
 
         const searchCriteria = ['SINCE', thirtyDaysAgo];
         
-        imap.search(searchCriteria, (err, results) => {
+        imap.search(searchCriteria, (err: Error | null, results: number[]) => {
           if (err) {
             reject(err);
             return;
@@ -159,12 +159,12 @@ export class IMAPService extends EventEmitter {
           const fetch = imap.fetch(results, { bodies: '', struct: true });
           let processedCount = 0;
 
-          fetch.on('message', async (msg, seqno) => {
+          fetch.on('message', async (msg: any, seqno: number) => {
             try {
               const emailData = await this.parseEmailMessage(msg);
               await this.processEmail(accountId, emailData);
               processedCount++;
-              
+
               if (processedCount % 10 === 0) {
                 console.log(`Processed ${processedCount}/${results.length} emails for account ${accountId}`);
               }
@@ -173,7 +173,7 @@ export class IMAPService extends EventEmitter {
             }
           });
 
-          fetch.once('error', (err) => {
+          fetch.once('error', (err: Error) => {
             console.error('Fetch error:', err);
             reject(err);
           });
@@ -209,13 +209,13 @@ export class IMAPService extends EventEmitter {
       (imap as any).checkInterval = checkInterval;
     };
 
-    imap.on('mail', async (numNewMsgs: any) => {
+    imap.on('mail', async (numNewMsgs: number) => {
       console.log(`New mail detected for account ${accountId}: ${numNewMsgs} messages`);
-      
+
       try {
         // Fetch new messages
         const searchCriteria = ['UNSEEN'];
-        imap.search(searchCriteria, async (err, results) => {
+        imap.search(searchCriteria, async (err: Error | null, results: number[]) => {
           if (err) {
             console.error('Search error:', err);
             return;
@@ -224,8 +224,8 @@ export class IMAPService extends EventEmitter {
           if (results.length === 0) return;
 
           const fetch = imap.fetch(results, { bodies: '', struct: true });
-          
-          fetch.on('message', async (msg, seqno) => {
+
+          fetch.on('message', async (msg: any, seqno: number) => {
             try {
               const emailData = await this.parseEmailMessage(msg);
               await this.processEmail(accountId, emailData);
@@ -239,11 +239,11 @@ export class IMAPService extends EventEmitter {
       }
     });
 
-    imap.on('expunge', (seqno: any) => {
+    imap.on('expunge', (seqno: number) => {
       console.log(`Message ${seqno} expunged for account ${accountId}`);
     });
 
-    imap.on('error', (err: any) => {
+    imap.on('error', (err: Error) => {
       console.error(`IMAP connection error for account ${accountId}:`, err);
       // Clear interval if exists
       if ((imap as any).checkInterval) {
@@ -324,7 +324,7 @@ export class IMAPService extends EventEmitter {
         });
       });
 
-      msg.once('error', (err: any) => {
+      msg.once('error', (err: Error) => {
         reject(err);
       });
     });

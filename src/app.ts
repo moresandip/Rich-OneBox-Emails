@@ -76,7 +76,7 @@ class App {
     this.app.use(express.static('public'));
 
     // Health check
-    this.app.get('/health', (req, res) => {
+    this.app.get('/health', (req: express.Request, res: express.Response) => {
       res.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
@@ -90,7 +90,7 @@ class App {
     this.app.use('/api/system', this.createSystemRoutes());
 
     // Serve frontend for all other routes (SPA fallback)
-    this.app.get('*', (req, res) => {
+    this.app.get('*', (req: express.Request, res: express.Response) => {
       res.sendFile('index.html', { root: 'public' });
     });
 
@@ -108,14 +108,14 @@ class App {
     const router = express.Router();
 
     // Email routes
-    router.get('/', (req, res) => this.emailController.getEmails(req, res));
-    router.get('/search', (req, res) => this.emailController.searchEmails(req, res));
-    router.get('/stats', (req, res) => this.emailController.getEmailStats(req, res));
-    router.get('/:id', (req, res) => this.emailController.getEmailById(req, res));
-    router.put('/:id', (req, res) => this.emailController.updateEmail(req, res));
-    router.delete('/:id', (req, res) => this.emailController.deleteEmail(req, res));
-    router.post('/:id/categorize', (req, res) => this.emailController.categorizeEmail(req, res));
-    router.post('/:id/suggest-reply', (req, res) => this.emailController.generateSuggestedReply(req, res));
+    router.get('/', (req: express.Request, res: express.Response) => this.emailController.getEmails(req, res));
+    router.get('/search', (req: express.Request, res: express.Response) => this.emailController.searchEmails(req, res));
+    router.get('/stats', (req: express.Request, res: express.Response) => this.emailController.getEmailStats(req, res));
+    router.get('/:id', (req: express.Request, res: express.Response) => this.emailController.getEmailById(req, res));
+    router.put('/:id', (req: express.Request, res: express.Response) => this.emailController.updateEmail(req, res));
+    router.delete('/:id', (req: express.Request, res: express.Response) => this.emailController.deleteEmail(req, res));
+    router.post('/:id/categorize', (req: express.Request, res: express.Response) => this.emailController.categorizeEmail(req, res));
+    router.post('/:id/suggest-reply', (req: express.Request, res: express.Response) => this.emailController.generateSuggestedReply(req, res));
 
     return router;
   }
@@ -124,14 +124,14 @@ class App {
     const router = express.Router();
 
     // Account routes
-    router.get('/', (req, res) => this.accountController.getAccounts(req, res));
-    router.get('/status', (req, res) => this.accountController.getConnectionStatus(req, res));
-    router.get('/:id', (req, res) => this.accountController.getAccountById(req, res));
-    router.post('/', (req, res) => this.accountController.createAccount(req, res));
-    router.put('/:id', (req, res) => this.accountController.updateAccount(req, res));
-    router.delete('/:id', (req, res) => this.accountController.deleteAccount(req, res));
-    router.post('/:id/test', (req, res) => this.accountController.testConnection(req, res));
-    router.post('/:id/sync', (req, res) => this.accountController.syncAccount(req, res));
+    router.get('/', (req: express.Request, res: express.Response) => this.accountController.getAccounts(req, res));
+    router.get('/status', (req: express.Request, res: express.Response) => this.accountController.getConnectionStatus(req, res));
+    router.get('/:id', (req: express.Request, res: express.Response) => this.accountController.getAccountById(req, res));
+    router.post('/', (req: express.Request, res: express.Response) => this.accountController.createAccount(req, res));
+    router.put('/:id', (req: express.Request, res: express.Response) => this.accountController.updateAccount(req, res));
+    router.delete('/:id', (req: express.Request, res: express.Response) => this.accountController.deleteAccount(req, res));
+    router.post('/:id/test', (req: express.Request, res: express.Response) => this.accountController.testConnection(req, res));
+    router.post('/:id/sync', (req: express.Request, res: express.Response) => this.accountController.syncAccount(req, res));
 
     return router;
   }
@@ -140,11 +140,11 @@ class App {
     const router = express.Router();
 
     // System routes
-    router.get('/status', async (req, res) => {
+    router.get('/status', async (req: express.Request, res: express.Response) => {
       try {
         const connectionStatus = this.imapService.getConnectionStatus();
         const dbManager = DatabaseManager.getInstance();
-        
+
         res.json({
           success: true,
           data: {
@@ -170,7 +170,7 @@ class App {
       }
     });
 
-    router.post('/start-imap', async (req, res) => {
+    router.post('/start-imap', async (req: express.Request, res: express.Response) => {
       try {
         await this.imapService.start();
         res.json({
@@ -185,7 +185,7 @@ class App {
       }
     });
 
-    router.post('/stop-imap', async (req, res) => {
+    router.post('/stop-imap', async (req: express.Request, res: express.Response) => {
       try {
         await this.imapService.stop();
         res.json({
